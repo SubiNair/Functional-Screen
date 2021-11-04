@@ -6,12 +6,32 @@ library(DT)
 library(shinyWidgets)
 library(dplyr)
 
+# Script for timeout feature
+timeoutSeconds <- 60 # 15'
+inactivity <- sprintf("function idleTimer() {
+var t = setTimeout(logout, %s);
+window.onmousemove = resetTimer; // catches mouse movements
+window.onmousedown = resetTimer; // catches mouse movements
+window.onclick = resetTimer;     // catches mouse clicks
+window.onscroll = resetTimer;    // catches scrolling
+window.onkeypress = resetTimer;  //catches keyboard actions
+function logout() {
+Shiny.setInputValue('timeOut', '%ss')
+}
+function resetTimer() {
+clearTimeout(t);
+t = setTimeout(logout, %s);  // time is in milliseconds (1000 is 1 second)
+}
+}
+idleTimer();", timeoutSeconds*1000, timeoutSeconds, timeoutSeconds*1000)
 
 ui <- fluidPage(
   
+  shinyUI(fluidPage(tags$script(inactivity))),
   
   tabsetPanel(  
     tabPanel("Processor", fluid = TRUE,
+              
              titlePanel("Functional Screen"),
              # Copy the line below to make a text input box
              sidebarPanel(
@@ -45,8 +65,8 @@ ui <- fluidPage(
     tabPanel('Plot', fluid=TRUE,
             sidebarPanel(
               radioButtons("norm", "Scale",
-                           c("Log2 (Raw Counts)" = "raw",
-                             "Log2 (CPM)" = "cpm")),
+                           c("Log2 (Raw Counts)" = "Log2 (Raw Counts)",
+                             "Log2 (CPM)" = "Log2 (CPM)")),
               
               selectizeInput('gene_selection',
                              choices = NULL,
@@ -150,7 +170,7 @@ server <- function(input, output, session) {
       colnames(counts_)
     )]
     
-    if(input$norm == 'cpm') {
+    if(input$norm == 'Log2 (CPM)') {
       norm_sub <- cbind(counts_sub[,1:2],
                        log2(cpm(counts_sub[,3:ncol(counts_sub)])+1))
     }
@@ -210,10 +230,11 @@ server <- function(input, output, session) {
       ggline("Sample", "Value",
              color = "ID",
              legend = "right", legend.title = "sgRNA",
+             title = gene,
              font.legend = c(10, 
                              #"bold", 
                              "black"),
-             ylab = input$norm) + ylim(0, NA) + 
+             ylab = input$norm) + ylim(0, NA) +
                facet_grid(~Group, scales = "free_x", # Let the x axis vary across facets.
                                    space = "free_x",  # Let the width of facets vary and force all bars to have the same width.
                                    switch = "x")     # Move the facet labels to the bottom.)
@@ -276,6 +297,15 @@ server <- function(input, output, session) {
     return(mgk_table)
   })
   
+  observeEvent(input$timeOut, { 
+    # Modified from: https://stackoverflow.com/questions/33839543/shiny-server-session-time-out-doesnt-work
+    showModal(modalDialog(
+      title = "Inactivity Timeout",
+      paste("Session timeout due to", input$timeOut, "inactivity -", Sys.time()),
+      footer = NULL
+    ))
+    stopApp() # I made this change so that the app closes instead of the window only
+  })
   
 
   
