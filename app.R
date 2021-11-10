@@ -7,7 +7,7 @@ library(shinyWidgets)
 library(dplyr)
 
 # Script for timeout feature
-timeoutSeconds <- 60 # 15'
+timeoutSeconds <- 60*15
 inactivity <- sprintf("function idleTimer() {
 var t = setTimeout(logout, %s);
 window.onmousemove = resetTimer; // catches mouse movements
@@ -43,12 +43,12 @@ ui <- fluidPage(
                fileInput("samplelookup", "Upload samples",
                          multiple = FALSE,
                          accept=c('.txt')
-                         ),
+                         )
                
-               fileInput("comp", "Upload comparison",
-                         multiple = FALSE,
-                         accept=c('.txt')
-               )
+               # fileInput("comp", "Upload comparison",
+               #           multiple = FALSE,
+               #           accept=c('.txt')
+               # )
              ),
              
              mainPanel(
