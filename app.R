@@ -90,7 +90,7 @@ ui <- fluidPage(
            sidebarPanel(
              fileInput("HM_genes", "Upload gene list",
                        multiple = FALSE,
-                       accept = c("txt",
+                       accept = c(".txt",
                                   ".csv")),
              radioButtons("summarize_to_gene", "Summarize to Gene",
                           c("True" = "T",
@@ -582,7 +582,9 @@ server <- function(input, output, session) {
   observeEvent(selected_groups(), {
     
     updatePickerInput(session, 'group_selection',
-                         choices = as.character(selected_groups()))
+                         choices = as.character(selected_groups()), 
+                         selected = as.character(selected_groups())
+                      )
   }, once = FALSE)
   
   
