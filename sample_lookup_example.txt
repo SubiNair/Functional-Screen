@@ -1,0 +1,7 @@
+Sample	Group	Optional_annotation
+C1	Control	A
+C2	Control	B
+C3	Control	A
+D1	Drug	B
+D2	Drug	A
+D3	Drug	B
