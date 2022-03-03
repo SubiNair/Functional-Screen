@@ -33,20 +33,34 @@ ui <- fluidPage(
   shinyUI(fluidPage(tags$script(inactivity))),
   
   tabsetPanel(  
-    tabPanel("Processor", fluid = TRUE,
+    tabPanel("Data upload", fluid = TRUE,
               
              titlePanel("Functional Screen"),
              # Copy the line below to make a text input box
              sidebarPanel(
+               
 
-               fileInput("pcounts", "Upload counts",
+               fileInput("pcounts", "Upload Counts File",
                          multiple = TRUE,
                          accept = c('.txt')),
                
-               fileInput("samplelookup", "Upload samples",
+               actionButton("counts_show", "Counts file info"),
+ 
+               
+               downloadButton("counts_download", "Download counts example",
+                              class = "butt"),
+               
+               hr(),
+               
+               fileInput("samplelookup", "Upload Sample Lookup File",
                          multiple = FALSE,
                          accept=c('.txt')
-                         )
+                         ),
+               
+               actionButton("sl_show", "Sample lookup info"),
+               
+               downloadButton("sl_download", "Download sample lookup example",
+                              class = "butt")
                
                # fileInput("comp", "Upload comparison",
                #           multiple = FALSE,
@@ -65,17 +79,22 @@ ui <- fluidPage(
              
     ), # end tab one
     
-    tabPanel('Plot', fluid=TRUE,
+    tabPanel('Gene plot', fluid=TRUE,
             sidebarPanel(
-              radioButtons("norm", "Scale",
+              
+              
+              radioButtons("norm", "Choose plot scale",
                            c("Log2 (Raw Counts)" = "Log2 (Raw Counts)",
                              "Log2 (CPM)" = "Log2 (CPM)")),
               
               selectizeInput('gene_selection',
                              choices = NULL,
                              multiple = F,
-                             label = HTML('<p style=“color:black;“>Select Gene</p>')),
-              pickerInput("group_selection","Select Groups", choices=NULL, options = list(`actions-box` = TRUE),multiple = T),
+                             label = HTML('<p style=“color:black;“>Select gene</p>')),
+              pickerInput("group_selection","Choose groups to display", choices=NULL, options = list(`actions-box` = TRUE),multiple = T),
+              
+              actionButton("line_show", "Line plot info"),
+              
               downloadButton("downloadPlot", "Download Plot")
               
             ),
@@ -105,6 +124,7 @@ ui <- fluidPage(
                                          }"), # Changes color related to file input, #082959
              downloadButton("Heatmap_example_download", "Download example gene list",
                             class = "butt"),
+             h5("Note: Gene and gene names will only display when optional annotation options are selected."),
              br(),
              uiOutput("HM_col_ann_ui"),
              uiOutput("HM_row_ann_ui"),
@@ -115,7 +135,8 @@ ui <- fluidPage(
                                                "Show gene names" = "rownames")
              ),
              actionButton("Heatmap_button", "Generate Plot",
-                           styleclass = "success")
+                           styleclass = "success"),
+             downloadButton("downloadHeatmap", "Download Heatmap")
            ), 
            
            mainPanel(
@@ -146,6 +167,55 @@ server <- function(input, output, session) {
   #   return(HM_genes_df)
   # })
   
+  observeEvent(input$counts_show, {
+    showModal(modalDialog(
+      title = "Counts file formatting",
+      "The counts file must be tab delimited. The first column should be labelled 'ID' and contain the gene and sgRNA/shRNA information. Each sgRNA or shRNA should follow this format: ‘GeneSymbol_UniqueID’. For example, ‘A1BG_CATCTTCTTTCACCTGAACG’. The raw counts for sgRNA/shRNA in each sample should be additional columns. The column names of these samples should match the ‘Sample’ column in the Sample_lookup File.",
+      easyClose = TRUE,
+      footer = NULL
+    ))
+  })
+  
+  observeEvent(input$sl_show, {
+    showModal(modalDialog(
+      title = "Sample Lookup file formatting",
+      "The sample lookup file must be tab delimited. This file needs at least 2 columns labeled ‘Sample’ and ‘Group’.	The ‘Sample’ column should match the sample column names in the counts file. The ‘Group’ column labels the group that each sample belongs in. For example, “Control” or “Treated_48h”. Any additional columns can be used as annotation in the heatmap.",
+      easyClose = TRUE,
+      footer = NULL
+    ))
+  })
+  
+  
+  observeEvent(input$line_show, {
+    showModal(modalDialog(
+      title = "Line Plot Info",
+      "Raw counts will display the input data, which should be raw, aligned counts that are NOT depth normalized.	The counts per million (CPM) option normalizes the samples so that they will all have the same sequencing depth. This is more ideal to compare counts across samples. Note that both options are displayed in Log2 so that sgRNA/shRNA with different abundance can be viewed on the same plot.",
+      easyClose = TRUE,
+      footer = NULL
+    ))
+  })
+  
+  counts_data_example <- read.delim("counts_example.txt")
+  sl_data_example <- read.delim("sample_lookup_example.txt")
+  
+  
+  output$counts_download <- downloadHandler(
+    filename = function() {
+      paste("counts_example", ".txt", sep="")
+    },
+    content = function(file) {
+      write.table(counts_data_example, file, quote = FALSE, sep = "\t", row.names = FALSE)
+    }
+  )
+  
+  output$sl_download <- downloadHandler(
+    filename = function() {
+      paste("sample_lookup_example", ".txt", sep="")
+    },
+    content = function(file) {
+      write.table(counts_data_example, file, quote = FALSE, sep = "\t", row.names = FALSE)
+    }
+  )
 
   
   # Counts table
@@ -166,6 +236,12 @@ server <- function(input, output, session) {
     
     temp_counts <- read.table(file = path_counts,
                               sep = "\t", header = T, stringsAsFactors = F)
+    
+    # remove rows (sgRNA) in temp_counts that sum to 0
+    
+    # row sums of temp_counts[,2:ncol(temp_counts)]
+    temp_counts <- temp_counts[!(rowSums(temp_counts[,2:ncol(temp_counts)]) == 0),]
+    
     counts <- cbind.data.frame(ID = temp_counts$ID,
                                gene = sapply(strsplit(temp_counts$ID, split = "_"),
                                              function(x){x[[n_order]]}),
@@ -242,12 +318,11 @@ server <- function(input, output, session) {
   CPM_table <- reactive({
     req(sample_lookup_sub())
     req(HM_genes_df())
-    req(sample_lookup_sub())
     req(cpm_counts())
     req(input$summarize_to_gene)
     
     summarize_to_gene <- input$summarize_to_gene
-    print(summarize_to_gene)
+    #print(summarize_to_gene)
     #print(head(sample_lookup_sub()))
     
     cpm_Samplesub <- cpm_counts()[,match(
@@ -260,32 +335,36 @@ server <- function(input, output, session) {
     if(summarize_to_gene == 'T')
       {
         cpm_temp <- cpm_Samplesub[cpm_Samplesub$gene %in% HM_genes_df()$Gene,]
-        HM_genes_df_temp <- HM_genes_df()[HM_genes_df()$Gene %in% cpm_temp$gene,]
+     
+        
+           HM_genes_df_temp <- HM_genes_df()[HM_genes_df()$Gene %in% cpm_temp$gene,]
         
         # Want order maintained
         cpm_temp$gene <- factor(cpm_temp$gene,
                                 levels = unique(HM_genes_df_temp$Gene))
         cpm_temp <- cpm_temp[order(cpm_temp$gene),] # This will be the same order as input gene-heatmap file
-        
-        
         # Only care about the gene column (of the first two)
         cpm_temp <- cpm_temp[,-1]
         cpm_temp <- ddply(cpm_temp, "gene", numcolwise(sum))
         rownames(cpm_temp) <- cpm_temp$gene
         cpm_temp <- cpm_temp[,-1]
+
         cpm_Samplesub_GeneSub <- log2(cpm_temp + 1)
         cpm_Samplesub_GeneSub <- na.omit(cpm_Samplesub_GeneSub) # Remove sgRNA or genes with no variance
     }
     
-    else{
+    else if(summarize_to_gene == 'F'){
       cpm_temp <- cpm_Samplesub[cpm_Samplesub$gene %in% HM_genes_df()$Gene,]
       HM_genes_df_temp <- HM_genes_df()[HM_genes_df()$Gene %in% cpm_temp$gene,]
       # Want order maintained
       cpm_temp$gene <- factor(cpm_temp$gene,
                               levels = unique(HM_genes_df_temp$Gene))
       cpm_temp <- cpm_temp[order(cpm_temp$gene),] # This will be the same order as input gene-heatmap file
+      
       rownames(cpm_temp) <- cpm_temp$ID
       cpm_temp <- cpm_temp[,-c(1,2)]
+      
+      
       cpm_Samplesub_GeneSub <- log2(cpm_temp + 1)
       cpm_Samplesub_GeneSub <- na.omit(cpm_Samplesub_GeneSub) # Remove sgRNA or genes with no variance
     }
@@ -300,8 +379,11 @@ server <- function(input, output, session) {
   HM_genes_final <- reactive({
     req(CPM_table())
     req(HM_genes_df())
+    req(input$summarize_to_gene)
     
-    if(summarize_to_gene == T){
+    summarize_to_gene <- input$summarize_to_gene
+    
+    if(summarize_to_gene == "T"){
       HM_genes_df_HM <- HM_genes_df()[HM_genes_df()$Gene %in% rownames(CPM_table()),]
     }else{
       HM_sgRNA_lookup <- cbind.data.frame(sgRNA = rownames(CPM_table()),
@@ -322,23 +404,41 @@ server <- function(input, output, session) {
   HM_cpm <- reactive({
     req(CPM_table())
     req(HM_genes_df())
-    
+    req(input$summarize_to_gene)
+
     cpm <- CPM_table()
-    HM_genes_df_ <- HM_genes_df()
+    HM_genes_df_ <- HM_genes_final()
+    summarize_to_gene <- input$summarize_to_gene
     
-    cpm <- cpm[rownames(cpm) %in% HM_genes_df_$Gene,]
+    #print(head(HM_genes_df_))
     
-    # Match the order of the genes (file order applied to the normalized data)
-    #genes_in_data <- toupper(HM_genes_df$Gene)[toupper(HM_genes_df$Gene) %in% rownames(cpm)]
-    genes_in_data <- HM_genes_df_$Gene[HM_genes_df_$Gene %in% rownames(cpm)]
-    cpm <- cpm[match(genes_in_data, rownames(cpm)),]
+    #print(cpm[rownames(cpm) %in% HM_genes_df_$Gene,])
     
-    # Optional Z-score
-    if("Z" %in% input$HM_options){
-      cpm <-data.frame(t(scale(t(cpm),scale = T,center=T)))
+    if(summarize_to_gene == "F") {
+      cpm <- cpm[rownames(cpm) %in% HM_genes_df_$sgRNA,]
+      # Match the order of the genes (file order applied to the normalized data)
+      #genes_in_data <- toupper(HM_genes_df$Gene)[toupper(HM_genes_df$Gene) %in% rownames(cpm)]
+      genes_in_data <- HM_genes_df_$sgRNA[HM_genes_df_$sgRNA %in% rownames(cpm)]
+      cpm <- cpm[match(genes_in_data, rownames(cpm)),]
+    }
+    else{
+      cpm <- cpm[rownames(cpm) %in% HM_genes_df_$Gene,]
+      # Match the order of the genes (file order applied to the normalized data)
+      #genes_in_data <- toupper(HM_genes_df$Gene)[toupper(HM_genes_df$Gene) %in% rownames(cpm)]
+      genes_in_data <- HM_genes_df_$Gene[HM_genes_df_$Gene %in% rownames(cpm)]
+      cpm <- cpm[match(genes_in_data, rownames(cpm)),]
     }
     
+    
+
+    # Optional Z-score
+    if("Z" %in% input$HM_options){
+      #print(head(data.frame(t(scale(t(cpm),scale = T,center=T)))))
+      cpm <-data.frame(t(scale(t(cpm),scale = T,center=T)))
+      
+    }
     #print(head(cpm))
+    
     return(cpm)
     
   })
@@ -348,7 +448,7 @@ server <- function(input, output, session) {
     
     df <- sample_lookup_sub()
     
-    selectInput("HM_col_ann", "Optionally select sample annotation", choices = as.list(c("None", colnames(df)[2:ncol(df)])),
+    selectInput("HM_col_ann", "Optionally, select sample annotation", choices = as.list(c("None", colnames(df)[2:ncol(df)])),
                 selected = "None", multiple = F )
     # Automatically selects the second column
   })
@@ -357,7 +457,7 @@ server <- function(input, output, session) {
   output$HM_row_ann_ui <- renderUI({
     df <- HM_genes_df()
     if (ncol(df) > 1){ # If there are additional annotations along with gene names:
-      selectInput("HM_row_ann", "Optionally select gene annotation", choices = as.list(c("None", colnames(df)[2:ncol(df)])),
+      selectInput("HM_row_ann", "Optionally, select gene annotation", choices = as.list(c("None", colnames(df)[2:ncol(df)])),
                   selected = "None", multiple = F )
     }else{
       selectInput("HM_row_ann", "Optionally select gene annotation", choices = as.list("None"),
@@ -367,6 +467,15 @@ server <- function(input, output, session) {
   
   
   ####    Several HM plotting parameters:
+  # HM_Z_score <- reactive({
+  #   if("Z" %in% input$HM_options){
+  #     T
+  #   }else{
+  #     F
+  #   }
+  # })
+  # 
+  
   HM_column_names <- reactive({
     if("colnames" %in% input$HM_options){
       T
@@ -410,7 +519,7 @@ server <- function(input, output, session) {
       df <- sample_lookup()
       Samples <- as.vector(df[,input$HM_col_ann])
       samples <- data.frame(Samples) # Helps with asthetics if in two steps
-      colnames(samples) <- "Sample"
+      colnames(samples) <- as.character(input$HM_col_ann)
 
       # Now, pick divergent colors:
       colorz <- setNames( distinctColorPalette(length(unique(Samples))), 
@@ -426,7 +535,15 @@ server <- function(input, output, session) {
   Heatmap_object <- eventReactive(input$Heatmap_button,{
     
     cpm_table <- data.matrix(HM_cpm())
+    #print(head(cpm_table))
+    
+    print(floor(min(cpm_table)))
+    print(floor(max(cpm_table)))
+    
+    saveRDS(cpm_table, "cpm_table")
+    print(cpm_table)
 
+    
     HM <- Heatmap(cpm_table,
                   heatmap_legend_param = list(at = c(floor(min(cpm_table)), 0, ceiling(max(cpm_table)))),
                   cluster_rows = HM_row_cluster(), 
@@ -590,10 +707,20 @@ server <- function(input, output, session) {
   
   output$downloadPlot <- downloadHandler(
     filename = function() {
-      paste("FS-", input$gene_selection, ".pdf", sep="")
+      paste("Lineplot_", input$gene_selection, ".pdf", sep="")
     },
     content = function(file) {
       ggsave(file, plotter(), device = "pdf", width=11, height=8.5)    
+    }
+  )
+  
+  output$downloadHeatmap <- downloadHandler(
+    filename = function() {
+      paste("heatmap-", input$gene_selection, ".png", sep="")
+    },
+    content = function(file) {
+      file
+      ggsave(file, grid.draw(Heatmap_object()))
     }
   )
 
