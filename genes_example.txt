@@ -1,0 +1,20 @@
+Gene	Sig_dir
+G1	Synthetic lethal
+G2	Synthetic lethal
+G3	Synthetic lethal
+G4	Synthetic lethal
+G5	Synthetic lethal
+G6	Synthetic lethal
+G7	Synthetic lethal
+G8	Synthetic lethal
+G9	Synthetic lethal
+G10	Resistant
+G11	Resistant
+G12	Resistant
+G13	Resistant
+G14	Resistant
+G15	Resistant
+G16	Resistant
+G17	Resistant
+G18	Resistant
+G19	Resistant
