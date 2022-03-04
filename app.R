@@ -206,27 +206,27 @@ server <- function(input, output, session) {
     ))
   })
   
-  counts_data_example <- read.delim("counts_example.txt")
-  sl_data_example <- read.delim("sample_lookup_example.txt")
-  
-  
-  output$counts_download <- downloadHandler(
-    filename = function() {
-      paste("counts_example", ".txt", sep="")
-    },
-    content = function(file) {
-      write.table(counts_data_example, file, quote = FALSE, sep = "\t", row.names = FALSE)
-    }
-  )
-  
-  output$sl_download <- downloadHandler(
-    filename = function() {
-      paste("sample_lookup_example", ".txt", sep="")
-    },
-    content = function(file) {
-      write.table(counts_data_example, file, quote = FALSE, sep = "\t", row.names = FALSE)
-    }
-  )
+  # counts_data_example <- read.delim("counts_example.txt")
+  # sl_data_example <- read.delim("sample_lookup_example.txt")
+  # 
+  # 
+  # output$counts_download <- downloadHandler(
+  #   filename = function() {
+  #     paste("counts_example", ".txt", sep="")
+  #   },
+  #   content = function(file) {
+  #     write.table(counts_data_example, file, quote = FALSE, sep = "\t", row.names = FALSE)
+  #   }
+  # )
+  # 
+  # output$sl_download <- downloadHandler(
+  #   filename = function() {
+  #     paste("sample_lookup_example", ".txt", sep="")
+  #   },
+  #   content = function(file) {
+  #     write.table(counts_data_example, file, quote = FALSE, sep = "\t", row.names = FALSE)
+  #   }
+  # )
 
   
   # Counts table
