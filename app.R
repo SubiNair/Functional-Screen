@@ -158,6 +158,17 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
+  observeEvent(input$timeOut, {
+    # Modified from: https://stackoverflow.com/questions/33839543/shiny-server-session-time-out-doesnt-work
+    showModal(modalDialog(
+      title = "Inactivity Timeout",
+      paste("Session timeout due to", input$timeOut, "inactivity -", Sys.time()),
+      footer = NULL
+    ))
+    stopApp() # I made this change so that the app closes instead of the window only
+  })
+  
+  
   # HM_genes_df <- reactive({
   #   req(input$HM_genes)
   #   
@@ -734,15 +745,6 @@ server <- function(input, output, session) {
     return(mgk_table)
   })
   
-  observeEvent(input$timeOut, {
-    # Modified from: https://stackoverflow.com/questions/33839543/shiny-server-session-time-out-doesnt-work
-    showModal(modalDialog(
-      title = "Inactivity Timeout",
-      paste("Session timeout due to", input$timeOut, "inactivity -", Sys.time()),
-      footer = NULL
-    ))
-    stopApp() # I made this change so that the app closes instead of the window only
-  })
 
 
   
