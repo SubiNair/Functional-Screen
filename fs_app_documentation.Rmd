@@ -4,27 +4,45 @@ author: "Surabhi Nair"
 date: "4/19/2022"
 output: html_document
 ---
+### Data Upload Tab
+#### There are two input values here: the Counts file and the Sample Lookup file.
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+#### Counts File
+The Counts must be in a tab delimited file. A template file is provided. The first column should be labelled 'ID' and contain the gene and sgRNA/shRNA information. Each sgRNA or shRNA should follow this format: ‘GeneSymbol_UniqueID’. For example, ‘A1BG_CATCTTCTTTCACCTGAACG’. The raw counts for sgRNA/shRNA in each sample should be additional columns. The column names of these samples should match the ‘Sample’ column in the Sample Lookup File.
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+| ID                        | C1 | C2  | C3  | T1 | T2 | T3 |
+|---------------------------|----|-----|-----|----|----|----|
+| A1BG_CATCTTCTTTCACCTGAACG | 98 | 123 | 144 | 23 | 89 | 67 |
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
-```
+#### Sample Lookup File
+The Sample Lookup must be a tab delimited file. A template file is provided. This file needs at least 2 columns labeled ‘Sample’ and ‘Group’. The ‘Sample’ column should match the sample column names in the counts file. The ‘Group’ column labels the group that each sample belongs in. For example, “Control” or “Treated_48h”. Any additional columns can be used as annotation in the heatmap.
 
-## Including Plots
+| Sample | Group       |
+|--------|-------------|
+| C1     | Control     |
+| C2     | Control     |
+| C3     | Control     |
+| T1     | Treated_48h |
+| T2     | Treated_48h |
+| T3     | Treated_48h |
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
+### Gene Plot Tab
+#### This tab displays a line plot of a selected gene. In addition to choosing genes and sample groups, the user determines the units of the plot
+Raw counts will display the input data, which should be raw, aligned counts that are NOT depth normalized. the counts per million (CPM) option normalizes the samples so they will all have the same sequencing depth. This is more ideal to compare counts across samples. Note that both options are displayed in Log2 so that sgRNA/shRNA with different abundances can be viewed on the same plot. 
+#### The user can download the plot that is being displayed in the main panel by selecting 'Download Plot' which will save the file as a PDF.
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Heatmap Tab
+ Heatmaps are a useful way to visualize differences in abundance across several genes at once. The user must upload a file indicating which genes are to be displayed. This file can include an additional column of annotation for each gene. A template file is provided. 
+
+#### Heatmap parameters
+- Summarize to Gene
+	- Selecting TRUE will group the y axis values according to the gene list uploaded, FALSE will maintain the original raw counts
+- Sample Annotation	
+	- The user can select between how the samples are grouped
+- Gene annotation
+	- The user can select between how the genes are grouped
+
+#### Following parameter specification, the plot is generated using the 'Generate Plot' button. The Heatmap can be downloaded as a PDF by selecting 'Download Plot'.
