@@ -84,8 +84,7 @@ ui <- fluidPage(
               
               
               radioButtons("norm", "Choose plot scale",
-                           c("Log2 (Raw Counts)" = "Log2 (Raw Counts)",
-                             "Log2 (CPM)" = "Log2 (CPM)")),
+                           c("Log2 (CPM)" = "Log2 (CPM)", "Log2 (Raw Counts)" = "Log2 (Raw Counts)")),
               
               selectizeInput('gene_selection',
                              choices = NULL,
@@ -132,7 +131,8 @@ ui <- fluidPage(
              checkboxGroupInput("HM_options", label = "Select heatmap options to perform:", 
                                 choices = list("Z-score transform" = "Z", "Cluster samples" = "col_cluster",
                                                "Cluster genes" = "row_cluster", "Show sample names" = "colnames", 
-                                               "Show gene names" = "rownames")
+                                               "Show gene names" = "rownames"),
+                                selected = c("Z","col_cluster", "row_cluster", "colnames", "rownames")
              ),
              actionButton("Heatmap_button", "Generate Plot",
                            styleclass = "success"),
@@ -343,6 +343,7 @@ server <- function(input, output, session) {
     
 
     # Subset cpm_Samplesub() for the inputted genes
+    # Otherwise raw counts will be used 
     if(summarize_to_gene == 'T')
       {
         cpm_temp <- cpm_Samplesub[cpm_Samplesub$gene %in% HM_genes_df()$Gene,]
@@ -620,6 +621,8 @@ server <- function(input, output, session) {
     return(norm_sub)
   })
   
+  
+  #This is the LINE PLOT
   plotter <- reactive({
     
     req(input$gene_selection)
@@ -667,13 +670,15 @@ server <- function(input, output, session) {
              color = "ID",
              legend = "right", legend.title = "sgRNA",
              title = gene,
+             point.size = 4,
+             size = 2,
              font.legend = c(10, 
                              #"bold", 
                              "black"),
              ylab = input$norm) + ylim(0, NA) +
                facet_grid(~Group, scales = "free_x", # Let the x axis vary across facets.
                                    space = "free_x",  # Let the width of facets vary and force all bars to have the same width.
-                                   switch = "x")     # Move the facet labels to the bottom.)
+                                   switch = "x") + theme(text = element_text(size=20))     # Move the facet labels to the bottom.)
     
     
     plot(ggl_facet)
@@ -682,6 +687,7 @@ server <- function(input, output, session) {
     
   })
   
+  #line plot -- output
   output$plot <- renderPlot({
     plotter()
   })
