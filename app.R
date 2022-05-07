@@ -92,13 +92,14 @@ ui <- fluidPage(
                              label = HTML('<p style=“color:black;“>Select gene</p>')),
               pickerInput("group_selection","Choose groups to display", choices=NULL, options = list(`actions-box` = TRUE),multiple = T),
               
-              actionButton("line_show", "Line plot info"),
+              actionButton("line_show", "Line plot info")
               
-              downloadButton("downloadPlot", "Download Plot")
+              
               
             ),
              mainPanel(
-               plotOutput('plot')
+               plotOutput('plot'),
+               downloadButton("downloadPlot", "Download Plot")
              )
     
     
@@ -135,12 +136,13 @@ ui <- fluidPage(
                                 selected = c("Z","col_cluster", "row_cluster", "colnames", "rownames")
              ),
              actionButton("Heatmap_button", "Generate Plot",
-                           styleclass = "success"),
-             downloadButton("downloadHeatmap", "Download Heatmap")
+                           styleclass = "success")
+             
            ), 
            
            mainPanel(
-             plotOutput("Heatmap_view",  height = "600px")
+             plotOutput("Heatmap_view",  height = "600px"),
+             downloadButton("downloadHeatmap", "Download Heatmap")
            )
              
            )
